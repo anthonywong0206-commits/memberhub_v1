@@ -43,8 +43,21 @@ window.saveDraftMember=()=>{if(!lockedSig){alert('請先確認簽署。');return
 function viewMembers(){const m=loadMembers();const q=(window.memberQ||'').toLowerCase();const filtered=m.filter(x=>[x.memberNumber,x.chineseName,x.englishName,x.phone,x.hkid].join(' ').toLowerCase().includes(q));return `<section class="card"><h2>會員管理</h2><input class="field" placeholder="搜尋姓名／會員編號／電話／身份證" value="${esc(window.memberQ||'')}" oninput="window.memberQ=this.value;render()"><div class="member-list" style="margin-top:12px">${filtered.map(x=>`<div class="member-mini"><div><div class="name">${esc(x.chineseName||x.name)} ${x.duplicateNumber?'<span class="pill">編號重複</span>':''}</div><div class="no">${esc(x.memberNumber)} ${x.englishName?`｜${esc(x.englishName)}`:''}</div></div><div class="actions"><button class="secondary" onclick="openMember('${x.id}')">查看</button><button class="danger" onclick="deleteMember('${x.id}')">刪除</button></div></div>`).join('')||'<p class="notice">沒有會員資料。</p>'}</div></section>`}
 window.openMember=id=>{if(!requirePassword('請輸入密碼查看會員資料'))return; editingId=id; page='memberDetail'; render()}
 window.deleteMember=id=>{if(!requirePassword('請輸入密碼刪除會員'))return;if(!confirm('確定刪除此會員？'))return;saveMembers(loadMembers().filter(x=>x.id!==id));render()}
-function viewMemberDetail(){const m=loadMembers().find(x=>x.id===editingId);if(!m)return `<section class="card">找不到會員。</section>`;return `<section class="card"><h2>會員資料</h2><form id="editForm">${formFields(m,false)}<div class="actions"><button type="submit">確認修改</button><button type="button" class="secondary" onclick="downloadPDFById('${m.id}')">下載 PDF</button><button type="button" class="ghost" onclick="go('members')">返回</button></div></form><div style="margin-top:16px">${pdfHTML(m)}</div></section>`}
+function viewMemberDetail(){const m=loadMembers().find(x=>x.id===editingId);if(!m)return `<section class="card">找不到會員。</section>`;const photoBlock=m.photo?`<div class="photoDeleteBox"><img class="photo big" src="${m.photo}" alt="個人近照"><button type="button" class="photoDeleteBtn" onclick="deleteMemberPhoto('${m.id}')" title="刪除相片">×</button></div>`:`<div class="photoEmpty">未有相片</div>`;return `<section class="card"><h2>會員資料</h2><div class="memberPhotoPanel"><h3>個人近照</h3>${photoBlock}<p class="hint">按相片右上角 × 可刪除相片，需輸入系統密碼。</p></div><form id="editForm">${formFields(m,false)}<div class="actions"><button type="submit">確認修改</button><button type="button" class="secondary" onclick="downloadPDFById('${m.id}')">下載 PDF</button><button type="button" class="ghost" onclick="go('members')">返回</button></div></form><div style="margin-top:16px">${pdfHTML(m)}</div></section>`}
 async function saveEdit(form){if(!requirePassword('請輸入密碼確認更改'))return;const file=form.photoFile?.files?.[0];const d=dataFromForm(form);if(file)d.photo=await fileToDataURL(file); else d.photo=form.photo.value;const err=validate(d,editingId);if(err){alert(err);return}const arr=loadMembers();const i=arr.findIndex(x=>x.id===editingId);arr[i]={...arr[i],...d,updatedAt:nowISO(),duplicateNumber:!!arr.find(x=>x.memberNumber===d.memberNumber&&x.id!==editingId)};saveMembers(arr);alert('已更新會員資料。');render()}
+
+window.deleteMemberPhoto=id=>{
+  if(!requirePassword('請輸入密碼以刪除相片'))return;
+  if(!confirm('確定要刪除這位會員的個人近照？'))return;
+  const arr=loadMembers();
+  const i=arr.findIndex(x=>x.id===id);
+  if(i<0){alert('找不到會員。');return}
+  arr[i].photo='';
+  arr[i].updatedAt=nowISO();
+  saveMembers(arr);
+  alert('相片已刪除。');
+  render();
+}
 window.downloadPDFById=id=>{const m=loadMembers().find(x=>x.id===id); if(m)downloadPDF(m)}
 window.downloadPDF=(m)=>{
   const mm={...m,signatureImage:m.signatureImage||lockedSig};
