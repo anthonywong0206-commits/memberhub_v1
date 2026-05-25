@@ -19,3 +19,5 @@
 4. 如使用 Vercel，直接重新部署即可
 
 不需要 npm，不需要 package.json，不需要 node_modules。
+
+v6 更新：修復 PDF 匯出時電子簽名不顯示；新增簽名圖片預覽；A4 一頁列印格式。
