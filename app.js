@@ -28,7 +28,7 @@ function render(){normalizeMembers(); const app=$('#app'); app.innerHTML=`<main 
 function view(){if(page==='register')return viewRegister(); if(page==='preview')return viewPreview(); if(page==='members')return viewMembers(); if(page==='memberDetail')return viewMemberDetail(); if(page==='settings')return viewSettings(); return viewHome()}
 function viewHome(){const m=loadMembers();const ym=new Date().toISOString().slice(0,7);const recent=[...m].sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,5);return `<div class="grid"><section class="card"><h2>功能</h2><div class="actions"><button onclick="go('register')">新會員登記</button><button class="secondary" onclick="go('members')">會員管理</button><button class="ghost" onclick="go('settings')">設定</button></div></section><section class="card"><h2>今日概況</h2><div class="stats"><div class="stat"><span>會員總數</span><b>${m.length}</b></div><div class="stat"><span>本月新增</span><b>${m.filter(x=>String(x.createdAt).slice(0,7)===ym).length}</b></div></div><p class="pill">今日：${today()}</p></section></div><section class="card"><h2>最近新增會員</h2><div class="member-list">${recent.length?recent.map(x=>`<div class="member-mini"><div><div class="name">${esc(x.chineseName||x.name)} ${x.englishName?`<span class="no">(${esc(x.englishName)})</span>`:''}</div><div class="no">${esc(x.memberNumber)}</div></div><span class="pill">${new Date(x.createdAt).toLocaleDateString('zh-HK')}</span></div>`).join(''):'<p class="notice">暫未有會員資料。</p>'}</div></section>`}
 function formFields(data={},disabled=false){const s=loadSettings(); const dis=disabled?'disabled':''; const numberField=s.manualNumber?`<input class="field" name="memberNumber" value="${esc(data.memberNumber||'')}" ${dis} required>`:`<input class="field" name="memberNumber" value="${esc(data.memberNumber||nextNo())}" disabled>`;return `<div class="row two"><label>會員編號 ${numberField}</label><label>中文姓名 <input class="field" name="chineseName" value="${esc(data.chineseName||'')}" ${dis} required></label></div><div class="row two"><label>英文姓名 <input class="field" name="englishName" value="${esc(data.englishName||'')}" ${dis} placeholder="如 CHAN Tai Man"></label><label>性別 <select class="field" name="gender" ${dis} required><option value="">請選擇</option><option ${data.gender==='男'?'selected':''}>男</option><option ${data.gender==='女'?'selected':''}>女</option></select></label></div><div class="row two"><label>出生日月年 <input class="field" type="date" name="dateOfBirth" value="${esc(data.dateOfBirth||'')}" ${dis} required></label><label>身份證號碼 <input class="field" name="hkid" value="${esc(data.hkid||'')}" ${dis} required></label></div><div class="row two"><label>電話 <input class="field" name="phone" value="${esc(data.phone||'')}" ${dis} required></label><label>電郵 <input class="field" type="email" name="email" value="${esc(data.email||'')}" ${dis}></label></div><div class="row"><label>住址 <textarea class="field" name="address" ${dis}>${esc(data.address||'')}</textarea></label></div><div class="row two"><label>緊急聯絡人姓名 <input class="field" name="emergencyContactName" value="${esc(data.emergencyContactName||'')}" ${dis}></label><label>緊急聯絡人電話 <input class="field" name="emergencyContactPhone" value="${esc(data.emergencyContactPhone||'')}" ${dis}></label></div><div class="row two"><label><input type="checkbox" name="declaration1" ${data.declaration1===false?'':'checked'} ${dis}> ${esc(s.declaration1)}</label><label><input type="checkbox" name="declaration2" ${data.declaration2===false?'':'checked'} ${dis}> ${esc(s.declaration2)}</label></div><div class="row"><label>個人近照 ${disabled?'': '<input class="field" type="file" name="photoFile" accept="image/*">'} </label>${data.photo?`<img class="photo" src="${data.photo}" alt="個人近照">`:''}<input type="hidden" name="photo" value="${esc(data.photo||'')}"></div>`}
-function viewRegister(){return `<section class="card"><h2>新會員登記</h2><p class="notice">請輸入會員資料。英文姓名及個人近照已加入本版本。</p><form id="regForm">${formFields({})}<div class="actions"><button type="button" class="ghost" onclick="resetReg()">清空</button><button type="submit">確認</button></div></form></section>`}
+function viewRegister(){return `<section class="card"><h2>新會員登記</h2><p class="notice">請輸入會員資料。英文姓名及個人近照已加入本版本。</p><div class="bulkExcelBox"><div><h3>Excel 批量匯入舊會員資料</h3><p class="hint">可下載範本 Excel，填好舊系統會員資料後匯入。匯入不會覆蓋現有會員；如會員編號重複，會照樣新增並標記「編號重複」。</p></div><div class="actions"><button type="button" class="secondary" onclick="downloadExcelTemplate()">下載範本 Excel</button><label class="uploadBtn">匯入 Excel<input type="file" accept=".xlsx,.xls,.csv" onchange="importMembersExcel(this.files[0]);this.value=''"></label></div></div><form id="regForm">${formFields({})}<div class="actions"><button type="button" class="ghost" onclick="resetReg()">清空</button><button type="submit">確認</button></div></form></section>`}
 window.resetReg=()=>{$('#regForm')?.reset()}
 async function fileToDataURL(file,maxW=900){return new Promise((res,rej)=>{if(!file)return res('');const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const scale=Math.min(1,maxW/img.width);const c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);const x=c.getContext('2d');x.drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.82))};img.onerror=rej;img.src=r.result};r.onerror=rej;r.readAsDataURL(file)})}
 function dataFromForm(form){const fd=new FormData(form);return {memberNumber:fd.get('memberNumber')||nextNo(),chineseName:fd.get('chineseName')||'',englishName:fd.get('englishName')||'',gender:fd.get('gender')||'',dateOfBirth:fd.get('dateOfBirth')||'',hkid:fd.get('hkid')||'',phone:fd.get('phone')||'',email:fd.get('email')||'',address:fd.get('address')||'',emergencyContactName:fd.get('emergencyContactName')||'',emergencyContactPhone:fd.get('emergencyContactPhone')||'',declaration1:!!fd.get('declaration1'),declaration2:!!fd.get('declaration2'),photo:fd.get('photo')||''}}
@@ -72,4 +72,70 @@ function settingsSubmit(){const f=$('#setForm'); if(!f)return; f.onsubmit=e=>{e.
 const oldAfter=afterRender; afterRender=function(){oldAfter();settingsSubmit()}
 window.backupData=()=>{const data={version:'memberhub_v15',exportedAt:nowISO(),settings:loadSettings(),members:loadMembers()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`MemberHub_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href)}
 window.importData=file=>{if(!file)return;const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);const incoming=(data.members||[]).map(migrateMember);const current=loadMembers();const nums=new Set(current.map(x=>x.memberNumber));let dup=0;incoming.forEach(x=>{if(nums.has(x.memberNumber)){x.duplicateNumber=true;dup++}current.push({...x,id:uid(),createdAt:x.createdAt||nowISO(),updatedAt:nowISO()});nums.add(x.memberNumber)});saveMembers(current);alert(`已匯入 ${incoming.length} 個會員。${dup?`其中 ${dup} 個會員編號重複，已標記提醒。`:''}`);render()}catch(e){alert('匯入失敗，請確認 JSON 備份檔格式。')}};r.readAsText(file)}
+
+function ensureXLSX(){ if(!window.XLSX){ alert('Excel 功能載入失敗，請確認網站可連接網絡，或重新整理頁面再試。'); return false } return true }
+function excelHeaders(){return ['會員編號','中文姓名','英文姓名','性別','出生日月年','身份證號碼','電話','電郵','住址','緊急聯絡人姓名','緊急聯絡人電話','聲明欄1同意','聲明欄2同意','備註']}
+window.downloadExcelTemplate=()=>{
+  if(!ensureXLSX())return;
+  const rows=[excelHeaders(),['M0001','陳大文','CHAN Tai Man','男','1980-01-31','A123456(7)','91234567','test@example.com','香港九龍示例地址','陳小明','98765432','是','是','舊系統匯入示例']];
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:14},{wch:20},{wch:8},{wch:14},{wch:16},{wch:14},{wch:24},{wch:34},{wch:18},{wch:18},{wch:14},{wch:14},{wch:22}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'會員匯入範本');
+  XLSX.writeFile(wb,'MemberHub_會員批量匯入範本.xlsx');
+}
+function normalizeHeader(h){return String(h||'').trim().replace(/\s+/g,'')}
+function yesLike(v){const t=String(v??'').trim().toLowerCase(); return !['否','no','n','false','0',''].includes(t)}
+function excelDateToISO(v){
+  if(!v)return '';
+  if(v instanceof Date && !isNaN(v))return v.toISOString().slice(0,10);
+  if(typeof v==='number'){
+    try{const d=XLSX.SSF.parse_date_code(v); if(d)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`}catch(e){}
+  }
+  const t=String(v).trim();
+  const m=t.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/); if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  const m2=t.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/); if(m2)return `${m2[3]}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
+  return t;
+}
+function rowToMember(row, autoNo){
+  const get=(...names)=>{for(const n of names){const key=Object.keys(row).find(k=>normalizeHeader(k)===normalizeHeader(n)); if(key!==undefined && row[key]!==undefined && row[key]!==null)return String(row[key]).trim()} return ''}
+  const no=get('會員編號','會員號碼','memberNumber','Member No','Member ID') || autoNo;
+  return migrateMember({
+    id:uid(), memberNumber:no, chineseName:get('中文姓名','姓名','name'), englishName:get('英文姓名','English Name','englishName'), gender:get('性別','gender'),
+    dateOfBirth:excelDateToISO(get('出生日月年','出生年月日','出生日期','dateOfBirth','dob')), hkid:get('身份證號碼','HKID','身份證'), phone:get('電話','電話號碼','phone'), email:get('電郵','電郵地址','email'), address:get('住址','地址','address'),
+    emergencyContactName:get('緊急聯絡人姓名','緊急聯絡人','emergencyContactName'), emergencyContactPhone:get('緊急聯絡人電話','緊急電話','emergencyContactPhone'),
+    declaration1:yesLike(get('聲明欄1同意','聲明1','declaration1')), declaration2:yesLike(get('聲明欄2同意','聲明2','declaration2')), photo:'', signatureImage:'', applicantName:get('中文姓名','姓名','name'), signatureDate:today(), createdAt:nowISO(), updatedAt:nowISO()
+  })
+}
+window.importMembersExcel=file=>{
+  if(!file)return; if(!ensureXLSX())return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(sheet,{defval:''});
+      if(!rows.length){alert('Excel 沒有可匯入的資料。');return}
+      const current=loadMembers(); const nums=new Set(current.map(x=>x.memberNumber));
+      const s=loadSettings(); let seq=Number(s.currentSequence||s.startNumber||1); let added=0, skipped=0, dup=0;
+      rows.forEach(row=>{
+        const maybeName=String(row['中文姓名']||row['姓名']||row['name']||'').trim();
+        if(!maybeName){skipped++;return}
+        const autoNo=(()=>{let parts=[]; if(s.includeYear)parts.push(new Date().getFullYear()); if(s.includeMonth)parts.push(String(new Date().getMonth()+1).padStart(2,'0')); return [s.prefix,...parts,pad(seq,s.digits)].filter(Boolean).join('-')})();
+        let member=rowToMember(row, autoNo);
+        if(!member.memberNumber) member.memberNumber=autoNo;
+        if(nums.has(member.memberNumber)){member.duplicateNumber=true; dup++}
+        else nums.add(member.memberNumber);
+        current.push(member); added++;
+        if(!String(row['會員編號']||row['會員號碼']||row['memberNumber']||'').trim()) seq++;
+      });
+      saveMembers(current);
+      if(!s.manualNumber){s.currentSequence=Math.max(Number(s.currentSequence||s.startNumber||1),seq);saveSettings(s)}
+      alert(`Excel 匯入完成：新增 ${added} 位會員。${skipped?`略過 ${skipped} 行空白姓名資料。`:''}${dup?`其中 ${dup} 個會員編號重複，已標記提醒。`:''}`);
+      page='members'; render();
+    }catch(err){console.error(err);alert('匯入失敗，請確認檔案是 Excel 範本格式。')}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 render();
